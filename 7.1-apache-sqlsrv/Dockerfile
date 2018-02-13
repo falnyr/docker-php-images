@@ -1,9 +1,25 @@
 FROM php:7.1-apache
 
+# pre-install
+RUN apt-get update && apt-get install -y \
+    zlib1g-dev \
+    libicu-dev \
+    g++ \
+    libssl-dev \
+    apt-transport-https
+
+# microsoft repository
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/8/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update
+
 # base
-RUN apt-get update \
-  && apt-get install -y libssl-dev apt-transport-https libcurl4-openssl-dev sudo git libxslt-dev zlib1g-dev graphviz zip libmcrypt-dev libicu-dev g++ libpcre3-dev libgd-dev libfreetype6-dev sqlite \
-  && apt-get clean \
+RUN ACCEPT_EULA=Y apt-get install -y \
+  libcurl4-openssl-dev sudo git libxslt-dev graphviz zip libmcrypt-dev libpcre3-dev libgd-dev libfreetype6-dev sqlite \
+  unixodbc unixodbc-dev odbcinst msodbcsql locales \
+  && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && locale-gen
+
+RUN apt-get clean \
   && docker-php-ext-install soap \
   && docker-php-ext-install zip \
   && docker-php-ext-install xsl \
@@ -17,16 +33,7 @@ RUN apt-get update \
   && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ --with-png-dir=/usr/include/ \
   && docker-php-ext-install gd
 
-# microsoft repository
-RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
-    && curl https://packages.microsoft.com/config/debian/8/prod.list > /etc/apt/sources.list.d/mssql-release.list \
-    && apt-get update
-
 # sqlsrv
-RUN ACCEPT_EULA=Y apt-get install -y unixodbc unixodbc-dev odbcinst msodbcsql locales \
-    && echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && locale-gen \
-    && apt-get clean
-
 RUN pecl install pdo_sqlsrv && \
     echo -e "extension=pdo_sqlsrv.so" > /usr/local/etc/php/conf.d/ext-pdosqlsrv.ini && \
     docker-php-ext-enable pdo_sqlsrv
